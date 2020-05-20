@@ -30,7 +30,7 @@
 #define BLYNK__AVAIL_TOPIC WIFI_HOSTNAME "/blynkavailability" // MQTT topic to notify if Blynk connected or disconnected
 
 // Distance Parameters
-#define ULT#define ULTRASONIC_MAX_DISTANCE 400 // Maximum distance (in cm) to ping.
+#define ULTRASONIC_MAX_DISTANCE 400 // Maximum distance (in cm) to ping.
 #define ULTRASONIC_DIST_MAX_CLOSE 160 // Maximum distance to indicate door is closed (in cm) - Used by sensor 1
 #define ULTRASONIC_DIST_MAX_CAR 160 // Maximum distance to indicate car is present (in cm) - Used by sensor 2
 #define ULTRASONIC_SETTLE_TIMEOUT 500 // ms to wait between pings (as all sensors get triggered at the same time)
