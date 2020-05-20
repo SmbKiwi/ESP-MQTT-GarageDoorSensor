@@ -435,6 +435,8 @@ Disconnect GarDoor-Car from your computer and prepare to install it in your gara
 - Plug the MicroUSB cable into a USB power supply (2.1A or above). 
 
 *Done!*
+
+![alt text](https://github.com/SmbKiwi/GarDoor-Car/blob/v2.00R/GarDoor-Installed.png?raw=true "GarDoor Installed")
     
 ### Home Assistant Configuration 
 
