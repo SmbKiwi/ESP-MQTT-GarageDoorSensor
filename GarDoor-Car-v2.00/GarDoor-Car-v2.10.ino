@@ -15,6 +15,7 @@
       - Next, download the ESP8266 dependencies by going to Tools -> Board -> Board Manager and searching for ESP8266 and installing it.
 
   - You will also need to download the following libraries by going to Sketch -> Include Libraries -> Manage Libraries
+      - ArduinoJson version 5.13.5> // Benoit Blanchon
       - NewPing
       - PubSubClient     
       - Blynk
@@ -42,6 +43,7 @@
 */
 
 //(Developer: SmbKiwi)
+//2.10R Add code: if distance is zero then assume echo timeout, reset echo pin (set LOW - some models of sensor don't have own timeout), and assume door is open/car is absent
 //2.00R Add support for Blynk App (you can use the QR code for OpenGarage project for Blynk App). Added MQTT publishing of ESP8266 data, ability to set relay type, and other small changes 
 //1.10R Design for a single garage door with seperate car detection using 2 ultrasonic sensors 
 
@@ -55,7 +57,7 @@
 // ------------------------------
 // ---- all config in auth.h ----
 // ------------------------------
-#define VERSION F("v2.00R - GarDoor-Car - https://github.com/SmbKiwi/GarDoor-Car ")
+#define VERSION F("v2.10R - GarDoor-Car - https://github.com/SmbKiwi/GarDoor-Car ")
 
 #include <BlynkSimpleEsp8266.h> // Volodymyr Shymanskyy
 #include <ArduinoJson.h> // Benoit Blanchon
@@ -163,15 +165,21 @@ DHT dht(DHT_PIN, DHT_TYPE);
 // Get the state of the garage door based upon the sensor distance
 byte getStateDoor(int distance1)
 {
-  if (distance1 <= 1) {
+  if (distance1 < 0) {
     garagestillopen(2);
-    return DOOR_UNKNOWN; // Should not ever be this close. Probably an error
+    return DOOR_UNKNOWN; // if no reading (-1) probably an error
+  } else if (distance1 == 0) {
+    garagestillopen(1);
+    return DOOR_OPENED;   
   } else if (distance1 <= ULTRASONIC_DIST_MAX_CLOSE) {
     garagestillopen(0);
     return DOOR_CLOSED;
-  } else {
+  } else if (distance1 <= ULTRASONIC_MAX_DISTANCE){
     garagestillopen(1);
     return DOOR_OPENED;   
+  } else {
+    garagestillopen(2);
+    return DOOR_UNKNOWN;   
   }
 }
 
@@ -208,12 +216,16 @@ void garagestillopen(int currdoorstate) {
 // Get the state of the car based upon the sensor distance
 byte getStateCar(int distance2)
 {
-  if (distance2 <= 1) {
-    return CAR_UNKNOWN; // Should not ever be this close. Probably an error
+  if (distance2 < 0) {
+    return CAR_UNKNOWN; // if no reading (-1) probably an error
+  } else if (distance2 == 0) {
+    return CAR_NO; 
   } else if (distance2 <= ULTRASONIC_DIST_MAX_CAR) {
     return CAR_YES;
-  } else {
+  } else if (distance2 <= ULTRASONIC_MAX_DISTANCE){
     return CAR_NO;
+  } else {
+    return CAR_UNKNOWN;
   }
 }
 
@@ -622,7 +634,8 @@ void reconnect() {
 void check_door_status() {
   byte state;
   byte stateVerify;
-  int distance = 0;
+  int distance = -1;
+  int distpin = -1;
   int lastDistance = 0;
 
   // Sensor 1 (--- Door 1 ---) Take a distance measurement
@@ -631,6 +644,20 @@ void check_door_status() {
   Serial.print(distance);
   Serial.print(".");
 
+  // Test if sensor 1 reading is zero, then assume timeout (distance is more than max) so reset echo pin
+  if (distance == 0) {                   // only when there was no echo
+    pinMode(DOOR1_ECHO_PIN, OUTPUT);
+    digitalWrite(DOOR1_ECHO_PIN, LOW); 
+    delayMicroseconds(10);               // shorter periods are not reliable
+    pinMode(DOOR1_ECHO_PIN, INPUT);
+    delayMicroseconds(10);
+    distpin = digitalRead(DOOR1_ECHO_PIN);    // the echo pin should now be low
+    if (distpin == 1){
+      Serial.println("echo still high"); // mainly for debug 
+      delay(500);
+    }
+  }
+  
   memmove(&door1_lastDistanceValues[1], &door1_lastDistanceValues[0], (door_numValues - 1) * sizeof(door1_lastDistanceValues[0])); // Move the array forward
   door1_lastDistanceValues[0] = distance;
   
@@ -643,7 +670,7 @@ void check_door_status() {
     }
   }
 
-  if ((distance > 0) && (lastDistance > 0)) { //only update door state if it is above 0
+  if ((distance > -1) && (lastDistance > -1)) { //only update door state if it is above -1
     state = getStateDoor(distance);
     stateVerify = getStateDoor(lastDistance);
     
@@ -662,6 +689,20 @@ void check_door_status() {
   Serial.print(distance);
   Serial.print(".");
 
+  // test if sensor 2 reading is zero, then assume timeout (distance is more than max) so reset echo pin
+  if (distance == 0) {                   // only when there was no echo
+    pinMode(DOOR2_ECHO_PIN, OUTPUT);
+    digitalWrite(DOOR2_ECHO_PIN, LOW); 
+    delayMicroseconds(10);               // shorter periods are not reliable
+    pinMode(DOOR2_ECHO_PIN, INPUT);
+    delayMicroseconds(10);
+    distpin = digitalRead(DOOR2_ECHO_PIN);    // the echo pin should now be low
+    if (distpin == 1){
+      Serial.println("echo still high"); // mainly for debug 
+      delay(500);
+    }
+  }
+  
   memmove(&door2_lastDistanceValues[1], &door2_lastDistanceValues[0], (door_numValues - 1) * sizeof(door2_lastDistanceValues[0])); // Move the array forward
   door2_lastDistanceValues[0] = distance;
   
@@ -674,7 +715,7 @@ void check_door_status() {
     }
   }
   
-  if ((distance > 0) && (lastDistance > 0)) {  //only update car state if it is above 0
+  if ((distance > -1) && (lastDistance > -1)) {  //only update car state if it is above -1
     state = getStateCar(distance);
     stateVerify = getStateCar(lastDistance);
       

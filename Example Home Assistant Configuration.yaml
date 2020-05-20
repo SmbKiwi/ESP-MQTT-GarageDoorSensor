@@ -127,13 +127,24 @@ automation:
    
   - alias: 'Update garage door/car state on startup'
     trigger:
-      - platform: homeassistant
-        event: start
+     - platform: homeassistant
+       event: start
     action:
-      - service: mqtt.publish
-        data:
-          topic: GarDoor/1/action
-          payload: "STATE"
+     - delay:
+         minutes: 5
+     - service: cover.stop_cover
+       entity_id: cover.garage_door
+    
+  - alias: 'Update Garage State every 1 Minute'
+    trigger:
+     - platform: time_pattern
+       minutes: "01"
+       seconds: "/2"
+    action:
+     - service: mqtt.publish
+       data:
+         topic: GarDoor/1/action
+         payload: "STATE"
    
   - alias: 'Close garage door if open for longer than 30 minutes'
     trigger:

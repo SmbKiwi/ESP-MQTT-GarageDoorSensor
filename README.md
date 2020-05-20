@@ -1,5 +1,5 @@
 # GarDoor-Car:
-Version: 2.00R
+Version: 2.10R
 
 ## ESP8266 MQTT Garage Door Opener, Garage Door and Car Sensor, and Temperature Monitor using Home Assistant/Blynk
 This project allows you to control (open/close) a "dumb" garage door opener for a garage door and independently reports the garage door status (open/closed) and presence of a car in the garage via MQTT and Blynk. In addition you can monitor the Temperature and Humidity within your garage over MQTT as well. This project requires two ultrasonic sensors: one pointed at the garage door, and the other pointed at the normal location of the car. This allows the presence of the car to be detected whether the garage door is open or closed.  
@@ -16,6 +16,8 @@ The code is based on DotNetDann's ESP-MQTT-GarageDoorSensor project (thanks Dani
 - Reports status of the garage door
 - Reports presence of a car in the garage whether the door is open or closed
 - Reports ultrasonic sensors distance readings
+- Reports door is open / car is absent if distance reading is 0 (because wave has not been received back by sensors)
+- Automatically resets echo pin(s) if distance is 0 to support ultrasonic sensors that do not timeout where no wave is received
 - Reports information about the ESP8266
 - Reports information on temperature and humidity
 - Ability to select Celius or Fahrenheit for temperature
@@ -81,6 +83,8 @@ GarDoor-Car will work with relay modules that are active-high or active-low; if 
 GarDoor-Car will work with either the HC-SR04 or HC-SR04P model. The HC-SR04P can use 3.3v or 5v power, while the HC-SR04 requires 5v power. When using the HC-SR04P model (as the wiring diagram below assumes), the maximum distance of the sensor is reduced slightly when using 3.3v power. For the purposes of this project, this shouldn't affect the results of the GarDoor-Car. Thus either model can be used, but it is recommended that you use the HC-SR04P powered using 3.3v.  
 
 While a HC-SR04P works using 3.3v power without any other changes to the design (see the wiring diagram below), if using HC-SR04 sensors (which require you to connect them to the 5v VCC for power), a 1k Ω resistor will need to be used between the ECHO pin on each distance sensor and the related input pin on the NodeMCU. 
+
+The code can be used with ultrasonic sensors which do not include a timeout. When the sensors do not receive an echo signal (because the wave has travelled further than the maximum supported distance and cannot or does not bounce back, they report 0 distance. When this occurs some sensors reset the echo pin to LOW when a timeout occurs, but some cheaper sensors do not have a timeout so they never reset the echo pin. The code includes a routine to reset the echo pin, if the read distance is 0.   
 
 #### 4. 5v MicroUSB cable and power supply
 Power your NodeMCU via the same type of power supply used to charge Android phones or power a RaspberryPi. Powering the NodeMCU via MicroUSB cable and power adapter is recommended since the relay module & DHT22 sensor can be powered via the NodeMCU VIN (or VU on the LoLin v3 variant) pin. A USB power adapter with 2.1A or above is recommended. 
@@ -278,11 +282,11 @@ Maximum distance (in cm) to ping. If using HC-SR04P sensors should be 400. If us
 
 ULTRASONIC_DIST_MAX_CLOSE number-in-cm
 
-Maximum distance (in cm) to indicate that the garage door is closed (used by sensor 1). If the measured distance to the object is less than this, then the door is published as closed.If the measured distance to the object is more than this, then the door is published as open. Must be a number. (Default: 120)   
+Maximum distance (in cm) to indicate that the garage door is closed (used by sensor 1). If the measured distance to the object is less than this, then the door is published as closed. If the measured distance to the object is more than this (or is 0 because the wave does not or cannot bounce back off an object within 400cm), then the door is published as open. Must be a number. (Default: 120)   
 
 ULTRASONIC_DIST_MAX_CAR number-in-cm
 
-Maximum distance (in cm) to indicate that the car is present (used by sensor 2). If the measured distance to the object is less than this, then the car is present. If the measured distance to the object is more than this, then the car is absent. Must be a number. (Default: 120)   
+Maximum distance (in cm) to indicate that the car is present (used by sensor 2). If the measured distance to the object is less than this, then the car is present. If the measured distance to the object is more than this (or is 0 because the wave does not or cannot bounce back off an object within 400cm), then the car is absent. Must be a number. (Default: 120)   
 
 ULTRASONIC_SETTLE_TIMEOUT milliseconds 
 
@@ -431,6 +435,8 @@ Disconnect GarDoor-Car from your computer and prepare to install it in your gara
 - Plug the MicroUSB cable into a USB power supply (2.1A or above). 
 
 *Done!*
+
+![alt text](https://github.com/SmbKiwi/GarDoor-Car/blob/v2.10R/GarDoor-Installed.png?raw=true "GarDoor Installed")
     
 ### Home Assistant Configuration 
 
