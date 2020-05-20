@@ -436,7 +436,7 @@ Disconnect GarDoor-Car from your computer and prepare to install it in your gara
 
 *Done!*
 
-![alt text](https://github.com/SmbKiwi/GarDoor-Car/blob/v2.00R/GarDoor-Installed.png?raw=true "GarDoor Installed")
+![alt text](https://github.com/SmbKiwi/GarDoor-Car/blob/v2.10R/GarDoor-Installed.png?raw=true "GarDoor Installed")
     
 ### Home Assistant Configuration 
 
